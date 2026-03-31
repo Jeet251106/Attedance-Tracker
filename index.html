@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Attendance Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#4F46E5">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Ionicons for neat mobile icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker registered', reg))
+            .catch(err => console.error('SW registration failed', err));
+        });
+      }
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="glass-header">
+            <h1 id="header-title">Today's Classes</h1>
+            <div class="header-actions">
+                <button id="holiday-toggle-btn" class="icon-btn" title="Toggle Holiday">
+                    <ion-icon name="bed-outline"></ion-icon>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Home View (Today's classes) -->
+            <section id="view-home" class="view active">
+                <div class="date-display">
+                    <button class="nav-day-btn" id="prev-day"><ion-icon name="chevron-back-outline"></ion-icon></button>
+                    <h2 id="current-date-text">Tue, Apr 1</h2>
+                    <button class="nav-day-btn" id="next-day"><ion-icon name="chevron-forward-outline"></ion-icon></button>
+                </div>
+                <div id="holiday-banner" class="hidden">
+                    <ion-icon name="partly-sunny-outline"></ion-icon>
+                    <p>It's a Holiday! No classes today.</p>
+                </div>
+                <div id="classes-list" class="classes-list">
+                    <!-- Class items will be injected here via JS -->
+                </div>
+                <!-- Empty state -->
+                <div id="no-classes-banner" class="hidden empty-state">
+                    <ion-icon name="cafe-outline"></ion-icon>
+                    <p>No classes scheduled for this day.</p>
+                </div>
+            </section>
+
+            <!-- Calendar View -->
+            <section id="view-calendar" class="view">
+                <div class="calendar-header">
+                    <button id="prev-month"><ion-icon name="chevron-back-outline"></ion-icon></button>
+                    <h2 id="calendar-month-text">April 2026</h2>
+                    <button id="next-month"><ion-icon name="chevron-forward-outline"></ion-icon></button>
+                </div>
+                <div class="calendar-grid-header">
+                    <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                </div>
+                <div id="calendar-grid" class="calendar-grid">
+                    <!-- Days will be injected here -->
+                </div>
+            </section>
+
+            <!-- Stats View -->
+            <section id="view-stats" class="view">
+                <div class="stats-header">
+                    <h2>Attendance Statistics</h2>
+                    <p id="stats-month-text">April 2026</p>
+                </div>
+                <div class="stats-overview">
+                    <div class="stat-card total">
+                        <h3>Overall</h3>
+                        <div class="stat-circle">
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                            <path class="circle-bg"
+                                d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                            <path class="circle" id="overall-chart"
+                                stroke-dasharray="0, 100"
+                                d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                            />
+                            <text x="18" y="20.35" class="percentage" id="overall-percentage">0%</text>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="stats-section-title">Subject-wise</h3>
+                <div id="stats-subjects" class="stats-list">
+                    <!-- Subject stats injected here -->
+                </div>
+
+                <h3 class="stats-section-title">Lab-wise</h3>
+                <div id="stats-labs" class="stats-list">
+                    <!-- Lab stats injected here -->
+                </div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="view-settings" class="view">
+                <h2>Settings</h2>
+                <div class="settings-card">
+                    <div class="setting-item">
+                        <label for="batch-select">Your Batch</label>
+                        <select id="batch-select">
+                            <option value="C1">C1</option>
+                            <option value="C2">C2</option>
+                            <option value="C3">C3</option>
+                            <option value="C4">C4</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <p class="setting-desc">Required to show the correct Lab sessions.</p>
+                    </div>
+                </div>
+                <div class="settings-card danger-zone">
+                    <button id="import-btn" class="btn outline-btn"><ion-icon name="download-outline"></ion-icon> Import Data</button>
+                    <button id="export-btn" class="btn outline-btn"><ion-icon name="navigate-outline"></ion-icon> Export Data</button>
+                    <hr>
+                    <button id="reset-btn" class="btn danger-btn"><ion-icon name="trash-outline"></ion-icon> Reset All Data</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-target="view-home">
+                <ion-icon name="home-outline"></ion-icon>
+                <span>Home</span>
+            </button>
+            <button class="nav-item" data-target="view-calendar">
+                <ion-icon name="calendar-outline"></ion-icon>
+                <span>Month</span>
+            </button>
+            <button class="nav-item" data-target="view-stats">
+                <ion-icon name="pie-chart-outline"></ion-icon>
+                <span>Stats</span>
+            </button>
+            <button class="nav-item" data-target="view-settings">
+                <ion-icon name="settings-outline"></ion-icon>
+                <span>Settings</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Hidden input for file import -->
+    <input type="file" id="import-file" style="display: none;" accept=".json">
+
+    <script src="app.js"></script>
+</body>
+</html>
