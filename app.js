@@ -1,40 +1,17 @@
+// --- Configuration ---
+// TODO: Replace with your actual RESTRICTED Google Gemini API Key
+const GLOBAL_GEMINI_API_KEY = "AIzaSyBD7fErz6XUjVFEQ-qCOKPK1LIMrdA1GUU";
+
 // --- Data Structures & State ---
-const timetable = {
-    1: [ // Monday
-        { name: 'OS', type: 'Lecture', time: '10:30 TO 11:30' },
-        { name: 'OOP', type: 'Lecture', time: '11:30 TO 12:30' },
-        { name: 'DM', type: 'Lecture', time: '1:00 TO 02:00' },
-        { name: 'COA', type: 'Lecture', time: '02:00 TO 03:00' },
-        { lab: true, C1: 'ES', C2: 'OS', C3: 'MATHS', C4: 'ADA', time: '03:15 TO 05:15' }
-    ],
-    2: [ // Tuesday
-        { lab: true, C1: 'OS', C2: 'OOP', C3: 'ADA', C4: 'COA', time: '10:30 TO 12:30' },
-        { name: 'OS', type: 'Lecture', time: '1:00 TO 02:00' },
-        { name: 'COA', type: 'Lecture', time: '02:00 TO 03:00' },
-        { lab: true, C1: 'MATHS', C2: 'MATHS', C3: 'ES', C4: 'OS', time: '03:15 TO 05:15' }
-    ],
-    3: [ // Wednesday
-        { name: 'DM', type: 'Lecture', time: '10:30 TO 11:30' },
-        { name: 'ES', type: 'Lecture', time: '11:30 TO 12:30' },
-        { name: 'Mentor Mentee Interaction', type: 'MMI', time: '1:00 TO 02:00' },
-        { name: 'ADA', type: 'Lecture', time: '02:00 TO 03:00' },
-        { lab: true, C1: 'OOP', C2: 'ES', C3: 'COA', C4: 'MATHS', time: '03:15 TO 05:15' }
-    ],
-    4: [ // Thursday
-        { name: 'ADA', type: 'Lecture', time: '10:30 TO 11:30' },
-        { name: 'COA', type: 'Lecture', time: '11:30 TO 12:30' },
-        { name: 'OOP', type: 'Lecture', time: '1:00 TO 02:00' },
-        { name: 'DM', type: 'Lecture', time: '02:00 TO 03:00' },
-        { lab: true, C1: 'ADA', C2: 'COA', C3: 'OS', C4: 'OOP', time: '03:15 TO 05:15' }
-    ],
-    5: [ // Friday
-        { lab: true, C1: 'COA', C2: 'ADA', C3: 'OOP', C4: 'ES', time: '10:30 TO 12:30' },
-        { name: 'ADA', type: 'Lecture', time: '1:00 TO 02:00' },
-        { name: 'OS', type: 'Lecture', time: '02:00 TO 03:00' },
-        { name: 'OOP', type: 'Lecture', time: '03:15 TO 04:15' },
-        { name: 'ES', type: 'Lecture', time: '04:15 TO 05:15' }
-    ]
+const defaultTimetable = {
+    1: [],
+    2: [],
+    3: [],
+    4: [],
+    5: []
 };
+
+let timetable = JSON.parse(JSON.stringify(defaultTimetable));
 
 let appState = {
     batch: 'C1',
@@ -52,7 +29,8 @@ function init() {
     setupHomeListeners();
     setupCalendarListeners();
     setupSettingsListeners();
-    
+    setupEditorListeners();
+
     // Initial renders
     renderSettings();
     renderHome();
@@ -61,6 +39,9 @@ function init() {
 function loadData() {
     const data = localStorage.getItem('attendanceAppTracker');
     if (data) Object.assign(appState, JSON.parse(data));
+    if (appState.customTimetable) {
+        timetable = JSON.parse(JSON.stringify(appState.customTimetable));
+    }
 }
 
 function saveData() {
@@ -102,7 +83,7 @@ function setupNavigation() {
             // Update active state
             navItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
-            
+
             // Switch views
             const targets = document.querySelectorAll('.view');
             targets.forEach(view => view.classList.remove('active'));
@@ -130,14 +111,14 @@ function setupHomeListeners() {
     document.getElementById('holiday-toggle-btn').addEventListener('click', () => {
         const dStr = formatDate(selectedDate);
         const mStr = formatMonth(selectedDate);
-        if(!isClassDay(selectedDate.getDay())) return; // Weekend
+        if (!isClassDay(selectedDate.getDay())) return; // Weekend
 
         ensureDayData(dStr, mStr);
         const dayData = appState.attendance[mStr][dStr];
         dayData.isHoliday = !dayData.isHoliday;
-        
+
         // if we mark holiday, clear standard manual attendance so it doesn't skew stats unexpectedly
-        if(dayData.isHoliday) {
+        if (dayData.isHoliday) {
             dayData.lectures = {};
         }
 
@@ -152,7 +133,7 @@ function isClassDay(dayIndex) {
 
 function renderHome() {
     document.getElementById('current-date-text').textContent = displayDate(selectedDate);
-    
+
     // Check if weekend
     const dayOfWeek = selectedDate.getDay();
     const dStr = formatDate(selectedDate);
@@ -161,10 +142,12 @@ function renderHome() {
     const emptyBanner = document.getElementById('no-classes-banner');
     const holidayBanner = document.getElementById('holiday-banner');
     const holidayToggle = document.getElementById('holiday-toggle-btn');
-    
+
     classesList.innerHTML = '';
-    
-    if (!isClassDay(dayOfWeek)) {
+
+    const classes = timetable[dayOfWeek] || [];
+
+    if (!isClassDay(dayOfWeek) || classes.length === 0) {
         emptyBanner.classList.remove('hidden');
         holidayBanner.classList.add('hidden');
         holidayToggle.style.opacity = '0.5';
@@ -175,13 +158,13 @@ function renderHome() {
     holidayToggle.style.opacity = '1';
     holidayToggle.style.pointerEvents = 'auto';
     emptyBanner.classList.add('hidden');
-    
+
     ensureDayData(dStr, mStr);
     const dayData = appState.attendance[mStr][dStr];
 
     if (dayData.isHoliday) {
         holidayBanner.classList.remove('hidden');
-        holidayToggle.innerHTML = '<ion-icon name="bed"></ion-icon>'; 
+        holidayToggle.innerHTML = '<ion-icon name="bed"></ion-icon>';
         holidayToggle.style.color = 'var(--primary)';
         // Still render classes but grayed out
         classesList.classList.add('holiday-mode');
@@ -192,8 +175,7 @@ function renderHome() {
         classesList.classList.remove('holiday-mode');
     }
 
-    const classes = timetable[dayOfWeek];
-    
+
     classes.forEach((c, index) => {
         const isLab = c.lab || false;
         const subjName = isLab ? c[appState.batch] : c.name;
@@ -222,23 +204,23 @@ function renderHome() {
                 </button>
             </div>
         `;
-        
+
         // Add event listeners
         const btns = el.querySelectorAll('.action-btn');
         btns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 if (dayData.isHoliday) return; // Prevent clicks if holiday
-                
+
                 const val = btn.getAttribute('data-val');
                 const idx = btn.getAttribute('data-idx');
-                
+
                 // Toggle logic
                 if (dayData.lectures[idx] === val) {
                     delete dayData.lectures[idx];
                 } else {
                     dayData.lectures[idx] = val;
                 }
-                
+
                 saveData();
                 renderHome(); // Re-render to update UI
             });
@@ -312,10 +294,10 @@ function renderCalendar() {
             // Switch to Home view automatically and render
             document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
             document.querySelector('[data-target="view-home"]').classList.add('active');
-            
+
             document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
             document.getElementById('view-home').classList.add('active');
-            
+
             renderHome();
         });
 
@@ -329,7 +311,7 @@ function renderStats() {
     const listLabs = document.getElementById('stats-labs');
     listSubjects.innerHTML = '';
     listLabs.innerHTML = '';
-    
+
     // We calculate stats for the currently selected month in calendar / home.
     // Let's use the month of `selectedDate` for the stats (so if user browses to May, they see May stats).
     const mStr = formatMonth(selectedDate);
@@ -337,17 +319,17 @@ function renderStats() {
     document.getElementById('stats-month-text').textContent = mDisplay;
 
     const data = appState.attendance[mStr] || {};
-    
+
     // Counters
     let totAttended = 0;
     let totMissed = 0;
-    
+
     const subjectStats = {};
     const labStats = {};
 
     // Helper to init subject stat
     const initStat = (dict, name) => {
-        if(!dict[name]) dict[name] = { attended: 0, missed: 0 };
+        if (!dict[name]) dict[name] = { attended: 0, missed: 0 };
     };
 
     // Iterate over all days in that month
@@ -388,15 +370,15 @@ function renderStats() {
     // Overview calculation
     const overallTotal = totAttended + totMissed;
     const overallPerc = overallTotal > 0 ? Math.round((totAttended / overallTotal) * 100) : 0;
-    
+
     document.getElementById('overall-percentage').textContent = overallTotal > 0 ? `${overallPerc}%` : '---';
     const chartOffset = overallTotal > 0 ? overallPerc : 0;
     document.getElementById('overall-chart').style.strokeDasharray = `${chartOffset}, 100`;
-    
+
     // Render subjects
     const renderList = (dict, container) => {
         const sorted = Object.keys(dict).sort();
-        if(sorted.length === 0) {
+        if (sorted.length === 0) {
             container.innerHTML = '<p style="text-align:center;color:var(--text-muted);font-size:0.9rem;">No data</p>';
             return;
         }
@@ -405,11 +387,11 @@ function renderStats() {
             const item = dict[name];
             const tot = item.attended + item.missed;
             const perc = tot > 0 ? Math.round((item.attended / tot) * 100) : 0;
-            
+
             let color = 'var(--text-main)';
-            if(tot > 0) {
-                if(perc >= 75) color = 'var(--secondary)';
-                else if(perc >= 50) color = 'var(--warning)';
+            if (tot > 0) {
+                if (perc >= 75) color = 'var(--secondary)';
+                else if (perc >= 50) color = 'var(--warning)';
                 else color = 'var(--danger)';
             }
 
@@ -441,7 +423,7 @@ function setupSettingsListeners() {
     });
 
     document.getElementById('reset-btn').addEventListener('click', () => {
-        if(confirm("Are you sure you want to delete all attendance records? This cannot be undone.")) {
+        if (confirm("Are you sure you want to delete all attendance records? This cannot be undone.")) {
             appState.attendance = {};
             saveData();
             alert("All data reset!");
@@ -452,7 +434,7 @@ function setupSettingsListeners() {
     document.getElementById('export-btn').addEventListener('click', () => {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState));
         const downloadAnchorNode = document.createElement('a');
-        downloadAnchorNode.setAttribute("href",     dataStr);
+        downloadAnchorNode.setAttribute("href", dataStr);
         downloadAnchorNode.setAttribute("download", "attendance_tracker_backup.json");
         document.body.appendChild(downloadAnchorNode);
         downloadAnchorNode.click();
@@ -465,13 +447,13 @@ function setupSettingsListeners() {
 
     document.getElementById('import-file').addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if(!file) return;
-        
+        if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const importedData = JSON.parse(e.target.result);
-                if(importedData.batch && importedData.attendance) {
+                if (importedData.batch && importedData.attendance) {
                     appState = importedData;
                     saveData();
                     renderSettings();
@@ -479,16 +461,289 @@ function setupSettingsListeners() {
                 } else {
                     alert("Invalid file format.");
                 }
-            } catch(err) {
+            } catch (err) {
                 alert("Error reading file.");
             }
         };
         reader.readAsText(file);
     });
+    document.getElementById('upload-timetable-btn').addEventListener('click', () => {
+        document.getElementById('import-timetable-file').click();
+    });
+
+    document.getElementById('import-timetable-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const importedData = JSON.parse(evt.target.result);
+                if (typeof importedData === 'object' && !Array.isArray(importedData)) {
+                    appState.customTimetable = importedData;
+                    timetable = JSON.parse(JSON.stringify(importedData));
+                    saveData();
+                    renderSettings();
+                    renderHome();
+                    alert("Timetable uploaded successfully!");
+                } else {
+                    alert("Invalid timetable format. Only JSON is supported.");
+                }
+            } catch (err) {
+                alert("Error reading file.");
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    document.getElementById('upload-image-btn').addEventListener('click', () => {
+        if (!GLOBAL_GEMINI_API_KEY || GLOBAL_GEMINI_API_KEY === "YOUR_API_KEY_HERE") {
+            alert('The Developer has not set up the Global Gemini API Key in the source code yet.');
+            return;
+        }
+        document.getElementById('import-image-file').click();
+    });
+
+    document.getElementById('import-image-file').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const base64Str = evt.target.result.split(',')[1];
+            await processImageWithGemini(base64Str, file.type);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('reset-timetable-btn').addEventListener('click', () => {
+        if (confirm("Are you sure you want to clear the timetable?")) {
+            appState.customTimetable = null;
+            timetable = JSON.parse(JSON.stringify(defaultTimetable));
+            saveData();
+            renderSettings();
+            renderHome();
+            alert("Timetable cleared!");
+        }
+    });
+
+}
+
+// --- Editor Logic ---
+let editingTimetable = null;
+let editingDay = 1;
+
+function setupEditorListeners() {
+    const editBtn = document.getElementById('edit-timetable-btn');
+    if (editBtn) editBtn.addEventListener('click', openEditor);
+
+    const setupBtn = document.getElementById('setup-timetable-btn');
+    if (setupBtn) {
+        setupBtn.addEventListener('click', () => {
+            document.querySelector('.nav-item[data-target="view-settings"]').click();
+        });
+    }
+
+    const closeBtn = document.getElementById('close-editor-btn');
+    if (closeBtn) closeBtn.addEventListener('click', closeEditor);
+
+    document.querySelectorAll('.day-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            saveEditorInputs(); // ensure current edits in inputs are saved
+            document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            editingDay = parseInt(btn.getAttribute('data-day'));
+            renderEditorClasses();
+        });
+    });
+
+    document.getElementById('add-lecture-btn').addEventListener('click', () => {
+        saveEditorInputs();
+        editingTimetable[editingDay].push({ name: '', type: 'Lecture', time: '' });
+        renderEditorClasses();
+    });
+
+    document.getElementById('add-lab-btn').addEventListener('click', () => {
+        saveEditorInputs();
+        editingTimetable[editingDay].push({ lab: true, C1: '', C2: '', C3: '', C4: '', time: '' });
+        renderEditorClasses();
+    });
+
+    document.getElementById('save-editor-btn').addEventListener('click', () => {
+        saveEditorInputs();
+        appState.customTimetable = editingTimetable;
+        timetable = JSON.parse(JSON.stringify(editingTimetable));
+        saveData();
+        closeEditor();
+        renderHome();
+        renderSettings();
+    });
+}
+
+function openEditor() {
+    editingTimetable = JSON.parse(JSON.stringify(timetable)); // clone current
+    editingDay = 1;
+    document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.day-btn[data-day="1"]').classList.add('active');
+
+    document.getElementById('editor-modal').classList.remove('hidden');
+    renderEditorClasses();
+}
+
+function closeEditor() {
+    document.getElementById('editor-modal').classList.add('hidden');
+}
+
+function saveEditorInputs() {
+    const list = document.getElementById('editor-classes-list');
+    const cards = list.querySelectorAll('.editor-class-card');
+
+    cards.forEach((card, idx) => {
+        const item = editingTimetable[editingDay][idx];
+        const timeInput = card.querySelector('.input-time');
+        if (timeInput) item.time = timeInput.value;
+
+        if (item.lab) {
+            item.C1 = card.querySelector('.input-c1').value;
+            item.C2 = card.querySelector('.input-c2').value;
+            item.C3 = card.querySelector('.input-c3').value;
+            item.C4 = card.querySelector('.input-c4').value;
+        } else {
+            const nameInput = card.querySelector('.input-name');
+            if (nameInput) item.name = nameInput.value;
+        }
+    });
+}
+
+function renderEditorClasses() {
+    const list = document.getElementById('editor-classes-list');
+    list.innerHTML = '';
+
+    const classes = editingTimetable[editingDay] || [];
+
+    if (classes.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 10px;">No classes added for this day.</p>';
+        return;
+    }
+
+    classes.forEach((c, idx) => {
+        const el = document.createElement('div');
+        el.className = 'editor-class-card';
+
+        const deleteBtn = `<button class="delete-class-btn" data-idx="${idx}"><ion-icon name="trash"></ion-icon></button>`;
+
+        let contentHtml = '';
+        if (c.lab) {
+            contentHtml = `
+                <div style="font-weight: 600; margin-bottom: 5px; color: var(--secondary);">Lab Session</div>
+                <input type="text" class="input-time" placeholder="Time (e.g. 10:30 TO 12:30)" value="${c.time || ''}">
+                <div class="lab-inputs">
+                    <input type="text" class="input-c1" placeholder="C1 Subject" value="${c.C1 || ''}">
+                    <input type="text" class="input-c2" placeholder="C2 Subject" value="${c.C2 || ''}">
+                    <input type="text" class="input-c3" placeholder="C3 Subject" value="${c.C3 || ''}">
+                    <input type="text" class="input-c4" placeholder="C4 Subject" value="${c.C4 || ''}">
+                </div>
+            `;
+        } else {
+            contentHtml = `
+                <div style="font-weight: 600; margin-bottom: 5px; color: var(--primary);">Lecture</div>
+                <input type="text" class="input-name" placeholder="Subject Name" value="${c.name || ''}">
+                <input type="text" class="input-time" placeholder="Time (e.g. 10:30 TO 11:30)" value="${c.time || ''}">
+            `;
+        }
+
+        el.innerHTML = deleteBtn + contentHtml;
+        list.appendChild(el);
+    });
+
+    list.querySelectorAll('.delete-class-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            saveEditorInputs();
+            const idx = parseInt(btn.currentTarget.getAttribute('data-idx'));
+            editingTimetable[editingDay].splice(idx, 1);
+            renderEditorClasses();
+        });
+    });
 }
 
 function renderSettings() {
     document.getElementById('batch-select').value = appState.batch || 'C1';
+    const resetTbBtn = document.getElementById('reset-timetable-btn');
+    if (resetTbBtn) {
+        resetTbBtn.style.display = appState.customTimetable ? 'flex' : 'none';
+    }
+}
+
+// --- Gemini AI Logic ---
+async function processImageWithGemini(base64Data, mimeType) {
+    const overlay = document.getElementById('loading-overlay');
+    overlay.classList.remove('hidden');
+
+    try {
+        const prompt = `You are a timetable parser. Look at this image of a schedule/timetable. Extract it strictly into this exact JSON format. 
+Keys must be "1" for Monday, "2" for Tuesday, "3" for Wednesday, "4" for Thursday, "5" for Friday.
+Each day should be an array of class objects.
+For normal lectures, object: {"name": "Subject Name", "type": "Lecture", "time": "e.g. 10:30 TO 11:30"}.
+For lab sessions, object: {"lab": true, "C1": "Subj 1", "C2": "Subj 2", "C3": "Subj 3", "C4": "Subj 4", "time": "e.g. 03:15 TO 05:15"}. (If it's just one lab for all, set all C1-C4 to the same subject).
+Return NOTHING else but the raw valid JSON. Do not include markdown \`\`\`json blocks.
+Example output:
+{
+  "1": [
+    {"name": "Math", "type": "Lecture", "time": "09:00 TO 10:00"}
+  ]
+}
+`;
+
+        const requestBody = {
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: mimeType, data: base64Data } }
+                ]
+            }],
+            generationConfig: {
+                temperature: 0.1
+            }
+        };
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GLOBAL_GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error.message);
+        }
+
+        let jsonText = data.candidates[0].content.parts[0].text;
+
+        jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(jsonText);
+
+        if (typeof parsed === 'object') {
+            for (let i = 1; i <= 5; i++) {
+                if (!parsed[i]) parsed[i] = [];
+            }
+            appState.customTimetable = parsed;
+            timetable = JSON.parse(JSON.stringify(parsed));
+            saveData();
+            renderSettings();
+            renderHome();
+            openEditor(); // Open editor so user can verify AI output
+            alert("Timetable extracted successfully! Please verify it in the Editor.");
+        } else {
+            throw new Error("Invalid output format from AI.");
+        }
+
+    } catch (err) {
+        alert("Failed to extract timetable: " + err.message);
+    } finally {
+        overlay.classList.add('hidden');
+        document.getElementById('import-image-file').value = '';
+    }
 }
 
 // Start

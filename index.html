@@ -5,21 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Attendance Tracker</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <meta name="theme-color" content="#4F46E5">
-    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
     <!-- Ionicons for neat mobile icons -->
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker registered', reg))
-            .catch(err => console.error('SW registration failed', err));
-        });
-      }
-    </script>
 </head>
 <body>
     <div class="app-container">
@@ -49,10 +38,10 @@
                 <div id="classes-list" class="classes-list">
                     <!-- Class items will be injected here via JS -->
                 </div>
-                <!-- Empty state -->
                 <div id="no-classes-banner" class="hidden empty-state">
                     <ion-icon name="cafe-outline"></ion-icon>
                     <p>No classes scheduled for this day.</p>
+                    <button id="setup-timetable-btn" class="btn outline-btn" style="margin-top: 15px;"><ion-icon name="calendar-outline"></ion-icon> Setup Timetable</button>
                 </div>
             </section>
 
@@ -127,6 +116,34 @@
                         <p class="setting-desc">Required to show the correct Lab sessions.</p>
                     </div>
                 </div>
+                <!-- Hero Settings Card for Timetable Setup -->
+                <div class="settings-card premium-card">
+                    <h3 class="gradient-text"><ion-icon name="calendar-outline"></ion-icon> Timetable Setup</h3>
+                    <p class="premium-desc">Choose how you want to build your class schedule.</p>
+                    
+                    <div class="setup-options">
+                        <button id="upload-image-btn" class="btn btn-large magic-btn">
+                            <ion-icon name="sparkles"></ion-icon>
+                            <div class="btn-content">
+                                <strong>AI Extract from Image</strong>
+                                <span>Upload a photo of your schedule</span>
+                            </div>
+                        </button>
+
+                        <button id="edit-timetable-btn" class="btn btn-large manual-btn">
+                            <ion-icon name="create"></ion-icon>
+                            <div class="btn-content">
+                                <strong>Create Manually</strong>
+                                <span>Build your week day-by-day</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="secondary-actions">
+                        <button id="upload-timetable-btn" class="btn outline-btn small-btn"><ion-icon name="cloud-download-outline"></ion-icon> Import JSON</button>
+                        <button id="reset-timetable-btn" class="btn danger-btn small-btn" style="display: none;"><ion-icon name="trash-outline"></ion-icon> Clear Data</button>
+                    </div>
+                </div>
                 <div class="settings-card danger-zone">
                     <button id="import-btn" class="btn outline-btn"><ion-icon name="download-outline"></ion-icon> Import Data</button>
                     <button id="export-btn" class="btn outline-btn"><ion-icon name="navigate-outline"></ion-icon> Export Data</button>
@@ -157,8 +174,47 @@
         </nav>
     </div>
 
+    <!-- Timetable Editor Modal -->
+    <div id="editor-modal" class="modal hidden">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h2>Edit Timetable</h2>
+                <button id="close-editor-btn" class="icon-btn"><ion-icon name="close-outline"></ion-icon></button>
+            </div>
+            <div class="modal-body">
+                <div class="day-selector">
+                    <button class="day-btn active" data-day="1">Mon</button>
+                    <button class="day-btn" data-day="2">Tue</button>
+                    <button class="day-btn" data-day="3">Wed</button>
+                    <button class="day-btn" data-day="4">Thu</button>
+                    <button class="day-btn" data-day="5">Fri</button>
+                </div>
+                
+                <div id="editor-classes-list" class="editor-classes">
+                    <!-- Classes for selected day will appear here -->
+                </div>
+                
+                <div class="editor-actions">
+                    <button id="add-lecture-btn" class="btn outline-btn"><ion-icon name="add-outline"></ion-icon> Add Lecture</button>
+                    <button id="add-lab-btn" class="btn outline-btn"><ion-icon name="flask-outline"></ion-icon> Add Lab</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-editor-btn" class="btn primary-btn">Save & Apply</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden input for file import -->
     <input type="file" id="import-file" style="display: none;" accept=".json">
+    <input type="file" id="import-timetable-file" style="display: none;" accept=".json">
+    <input type="file" id="import-image-file" style="display: none;" accept=".png,.jpg,.jpeg,.webp,image/*">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="modal hidden" style="flex-direction: column; z-index: 10000;">
+        <div class="spinner"></div>
+        <p style="margin-top: 15px; color: white; font-weight: 500; text-align: center;">AI is reading your timetable...<br><span style="font-size: 0.8rem; opacity: 0.8;">This may take a few seconds</span></p>
+    </div>
 
     <script src="app.js"></script>
 </body>
