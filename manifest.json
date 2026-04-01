@@ -1,0 +1,22 @@
+{
+  "name": "Attendance Tracker",
+  "short_name": "Attendance",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#4F46E5",
+  "description": "Offline Attendance Tracker for your mobile device.",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234F46E5' rx='20'/><text x='50' y='65' font-size='50' fill='white' text-anchor='middle' font-family='sans-serif'>A</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%234F46E5' rx='20'/><text x='50' y='65' font-size='50' fill='white' text-anchor='middle' font-family='sans-serif'>A</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
